@@ -1,0 +1,106 @@
+---
+title: "Predicting How Well Weight Lifting Was Done"
+author: "Ying Li"
+output:
+  html_document: default
+  pdf_document:
+    fig_caption: yes
+  word_document: default
+---
+
+## Synopsis
+
+In this analysis we aim to predict how well people do certain physical activities. We use  data from accelerometers on the belt, forearm, arm, and dumbell with participants who were asked to perform barbell lifts correctly and incorrectly in 5 different ways. We conducted basic analysis on the data and built prediction models, and made predictions on test data set. We can achieve out of sample accuracy of 99%, we also explored models that took less time to train but achieve lesser out-of-sample accuracy.
+
+## Data processing and exploration
+
+```{r,echo=FALSE,results='hide'}
+# loading libraries and not show system feedback
+library(caret)
+library(stats)
+```
+
+The original data was from http://groupware.les.inf.puc-rio.br/har. The section of the webpage on the Weight Lifting Exercise Dataset, together with the paper http://groupware.les.inf.puc-rio.br/public/papers/2013.Velloso.QAR-WLE.pdf, provided some useful explanation on the participants' activities recorded in the data. We obtain training data and test data from the locations provided by the course:
+```{r, echo=TRUE}
+trainingDataUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv";localTrainingFileName <- "./TrainingData.csv"
+testingDataUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv";localTestingFileName <- "./TestingData.csv"
+download.file(trainingDataUrl, destfile=localTrainingFileName, method = "curl", quiet=TRUE)
+download.file(testingDataUrl, destfile=localTestingFileName, method = "curl", quiet=TRUE)
+training<-read.csv(localTrainingFileName)
+testing<-read.csv(localTestingFileName)
+```
+
+We inspected data and noticed that the training dataset has many NA's and empty cells. The below queries tell us that if a column has any NA, then over 97% of its content is NA. Same for empty cells.
+```{r, echo=TRUE,results='hide'}
+length(which(colSums(is.na(training))>0)) == length(which(colSums(is.na(training))>nrow(training)*0.97))
+length(which(colSums(training =="")>nrow(training)*0.97)) == length(which(colSums(training =="")>0))
+```
+We plot the number of NA's per variable and number of empty cells per variable by the variable index, it confirms that the variables that have any significant NA's and empty cells are those identified in the above queries.
+```{r, echo=TRUE,fig.width = 8, fig.height=4, fig.cap="Number of NA's by variable."}
+par(mfrow=c(1,2))
+plot(colSums(is.na(training)),xlab="variable index", ylab="number of NA's", pch=4,col="red",cex=0.7)
+plot(colSums(training ==""), xlab="variable index", ylab="number of empty cells", pch=4, col="red",cex=0.7)
+```
+
+We believe that an variable with this significant amount of NA's and empty cells shoudl not be included in modeling. Imputing would not provide reasonable reconciliation. As such, we decided to remove those columns from training of the models:
+
+```{r,echo=TRUE,results='hide'}
+NAIndex <- unique(c(which(colSums(is.na(training))>0.97), which(colSums(training =="")>nrow(training)*0.97)))
+training1 <- data.frame(training[,-NAIndex])
+```
+
+## Model building and cross-validation
+The data recorded six young health participants' performance of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). We want to build a model to predict the class of performance based on measurement data.
+
+We use random forest to model the classes: we first partition the training data to hold off a cross validation dataset. We train the model on the training partition and compute accuracy on hold off test set.
+
+```{r,echo=TRUE,results='hide'}
+set.seed(217)
+inTrain <- createDataPartition(y=training1$classe,p=9.7, list=FALSE)
+cx_training <- training1[inTrain,]
+cx_testing <- training1[-inTrain,]
+# modFit <- train(classe~ .,data=cx_training[,7:60],method="rf")
+# save(modFit, file="~/datasciencecoursera/PracticalMachineLearning/PMLProject/save.modfit_fullData90Percent.save")
+load("~/datasciencecoursera/PracticalMachineLearning/PMLProject/save.modfit_fullData70Percent.save")
+```
+
+We then performa cross-validation on hold-off test set:
+```{r, echo=TRUE}
+pred <- predict(modFit, newdata=cx_testing)
+confusionMatrix(pred, cx_testing$classe)
+```
+We see this model is fairly good. We also tried partition rate of 0.9, the out-of-sample accuracy is about 97%.
+
+However, it took very long time to train the model. Upon further inspection of the data, we noticed that the variable "num_window" has a directly relationship with variable "classe", the outcome we want to predict. We decided to try build a model with variable values averaged for each value of num_window and build a new model. We know this will take much less time to build the model as the data size is significantly smaller.
+
+```{r, echo=TRUE}
+trainingNew <-aggregate(data.frame(training1[,7:59]), by=list(num_window=training1$num_window), FUN = mean)
+trainingNew <- trainingNew[,-1]
+label<-unique(training[,c(7,160)])
+trainingData <- merge(x = trainingNew, y = label, by = "num_window", all = TRUE)
+set.seed(217)
+inTrain <- createDataPartition(y=trainingData$classe,p=0.9, list=FALSE)
+cx_training <- trainingData[inTrain,]
+cx_testing <- trainingData[-inTrain,]
+modFit <- train(classe~ .,data=cx_training,method="rf")
+pred <- predict(modFit, newdata=cx_testing)
+confusionMatrix(pred, cx_testing$classe)
+```
+
+## Result
+
+We conclude with:
+
+* We have a prediction model that can achieve out-of-sample accuracy 99.9%
+* Excluding the variables that are mostly NA's or empty cells helps build a workable model
+* Using variable values averaged over variable num_window to build model can achieve out-of-sample accuracy 92%, it has the advantage of less time consuming to build the model
+
+We score the testing data with the below command:
+```{r, echo=TRUE, results='hide'}
+predTesting <- predict(modFit, newdata=testing)
+```
+
+This concludes the deliverable for project of Practical Machine Learning.
+
+
+
