@@ -92,6 +92,7 @@ cx_training &lt;- training1[inTrain,]
 cx_testing &lt;- training1[-inTrain,]
 ## modFit &lt;- train(classe~ .,data=cx_training[,7:60],method=&quot;rf&quot;)
 ## save(modFit, file=&quot;~/datasciencecoursera/PracticalMachineLearning/PMLProject/save.modfit_fullData70Percent.save&quot;)
+# I used eval=-(5:6) to skip the model training step during html compile and load the model already built at html compile time
 load(&quot;~/datasciencecoursera/PracticalMachineLearning/PMLProject/save.modfit_fullData70Percent.save&quot;)</code></pre>
 <p>We then perform cross-validation on hold-off test partition and show the confusion matrix:</p>
 <pre class="r"><code>pred &lt;- predict(modFit, newdata=cx_testing)

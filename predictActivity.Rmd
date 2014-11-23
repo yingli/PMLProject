@@ -61,6 +61,7 @@ cx_training <- training1[inTrain,]
 cx_testing <- training1[-inTrain,]
 modFit <- train(classe~ .,data=cx_training[,7:60],method="rf")
 save(modFit, file="~/datasciencecoursera/PracticalMachineLearning/PMLProject/save.modfit_fullData70Percent.save")
+# I used eval=-(5:6) to skip the model training step during html compile and load the model already built at html compile time
 load("~/datasciencecoursera/PracticalMachineLearning/PMLProject/save.modfit_fullData70Percent.save")
 ```
 
