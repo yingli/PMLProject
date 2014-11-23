@@ -21,6 +21,7 @@ library(stats)
 ```
 
 The original data was from http://groupware.les.inf.puc-rio.br/har. The section of the webpage on the Weight Lifting Exercise Dataset, together with the paper http://groupware.les.inf.puc-rio.br/public/papers/2013.Velloso.QAR-WLE.pdf, provided some useful explanation on the participants' activities recorded in the data. We obtain training data and test data from the locations provided by the course:
+
 ```{r, echo=TRUE}
 trainingDataUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv";localTrainingFileName <- "./TrainingData.csv"
 testingDataUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv";localTestingFileName <- "./TestingData.csv"
